@@ -1,0 +1,1 @@
+Minimalist FastAPI Docker config
