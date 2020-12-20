@@ -1,3 +1,5 @@
 .idea
 .env
 
+# just in case
+*.key*
