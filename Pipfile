@@ -10,6 +10,8 @@ fastapi = {extras = ["all"], version = "*"}
 gunicorn = "*"
 pydantic = "*"
 uvicorn = "*"
+python-jose = {extras = ["cryptography"], version = "*"}
+starlette = "*"
 
 [requires]
 python_version = "3.8"
