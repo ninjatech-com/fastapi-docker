@@ -3,8 +3,8 @@ import datetime
 from fastapi import Depends, FastAPI, HTTPException, status
 import pydantic
 
-from .cors import setup_cors
-from .jwt import BearerToken, JWTBearerRS256, TOKEN_LIFETIME_SECONDS
+from app.cors import setup_cors
+from app.jwt import BearerToken, JWTBearerRS256, TOKEN_LIFETIME_SECONDS
 
 
 class LoginCredentials(pydantic.BaseModel):
@@ -12,12 +12,12 @@ class LoginCredentials(pydantic.BaseModel):
     password: str
 
 
-app = FastAPI()
-setup_cors(app)
+application = FastAPI()
+setup_cors(application)
 auth = JWTBearerRS256()
 
 
-@app.get("/")
+@application.get("/")
 async def root() -> dict:
     """
     I'm just here.
@@ -35,7 +35,7 @@ async def authenticate_user(creds: LoginCredentials) -> str:
     return "username"
 
 
-@app.post("/auth/token", response_model=BearerToken)
+@application.post("/auth/token", response_model=BearerToken)
 async def login(credentials: LoginCredentials):
     """
     Validates credentials, returns authorization token
@@ -52,10 +52,20 @@ async def login(credentials: LoginCredentials):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = JWTBearerRS256.create_access_token(claims={"sub": user}, expires_delta=TOKEN_LIFETIME_SECONDS)
+    access_token = JWTBearerRS256.create_access_token(claims={"sub": user},
+                                                      expires_delta=datetime.timedelta(seconds=TOKEN_LIFETIME_SECONDS))
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@application.get("/secure", dependencies=[Depends(auth)])
+async def mypage():
+    """
+    A secured page
+    :return: placeholder
+    """
+    return {'place': 'holder'}
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(application, host="0.0.0.0", port=8000)

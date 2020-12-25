@@ -1,3 +1,4 @@
+from base64 import standard_b64decode
 import datetime
 import os
 from typing import Dict, Optional
@@ -10,7 +11,7 @@ from jose import JWTError, jws, jwt
 import pydantic
 
 from starlette.requests import Request
-from starlette.status import HTTP_403_FORBIDDEN, HTTP_500_INTERNAL_SERVER_ERROR
+from starlette.status import HTTP_403_FORBIDDEN
 
 TOKEN_LIFETIME_SECONDS = os.environ.get('TOKEN_LIFETIME_SECONDS') or 60 * 60
 TOKEN_LIFETIME_SECONDS = int(TOKEN_LIFETIME_SECONDS)  # convert if it came in from the environment
@@ -21,12 +22,18 @@ class BearerToken(pydantic.BaseModel):
     token_type: str
 
 
-def get_private_key():
-    return os.environ['PRIVATE_KEY']
+def get_private_key() -> str:
+    # I had billions of problems with multiline entries in my .env file, so I base64 encode the RSA keys for environment
+    # variables
+    key = standard_b64decode(os.environ['JWT_PRIVATE_KEY']).decode('utf-8')
+    return key
 
 
-def get_public_key():
-    return os.environ['PUBLIC_KEY']
+def get_public_key() -> str:
+    # I had billions of problems with multiline entries in my .env file, so I base64 encode the RSA keys for environment
+    # variables
+    key = standard_b64decode(os.environ['JWT_PUBLIC_KEY']).decode('utf-8')
+    return key
 
 
 class JWTBearerRS256(HTTPBearer):
@@ -82,9 +89,9 @@ class JWTBearerRS256(HTTPBearer):
     def create_access_token(cls, claims: Dict, expires_delta: Optional[datetime.timedelta]) -> str:
         """
         Create a signed access token with claims
-        :param claims:
-        :param expires_delta:
-        :return:
+        :param claims: the claims to put in the key
+        :param expires_delta: how long the token is good for
+        :return: a JWT string
         """
         claims_to_encode = claims.copy()
         if expires_delta:
@@ -92,12 +99,12 @@ class JWTBearerRS256(HTTPBearer):
         else:
             expire = datetime.datetime.utcnow() + datetime.timedelta(seconds=TOKEN_LIFETIME_SECONDS)
 
-        if not {'iat', 'exp'}.isdisjoint(claims):
-            # I don't want the caller to set these two for security reasons
-            raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR)
+        if not set(claims).isdisjoint({'iat', 'exp'}):
+            # I don't want the caller to deliver the issued at time nor the expiration for security
+            raise ValueError('Invalid claims')
 
-        claims_to_encode['iat'] = datetime.datetime.utcnow()
-        claims_to_encode['exp'] = expire
+        claims_to_encode['iat'] = datetime.datetime.utcnow().isoformat()
+        claims_to_encode['exp'] = expire.isoformat()
         encoded = jws.sign(claims_to_encode, get_private_key(), algorithm=cls.ALGORITHM)
 
         return encoded
