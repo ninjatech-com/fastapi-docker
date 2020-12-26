@@ -32,6 +32,10 @@ async def root() -> dict:
 
 @application.get('/pubkey')
 async def get_pubkey_b64():
+    """
+    Get the RSA PEM encoded public key in base64 encoding
+    :return: str
+    """
     return get_public_key_b64()
 
 
@@ -66,7 +70,8 @@ async def login(credentials: LoginCredentials):
         claims={"sub": user},
         expires_delta=datetime.timedelta(seconds=TOKEN_LIFETIME_SECONDS)
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    rv = BearerToken(access_token=access_token, token_type='bearer')
+    return rv
 
 
 @application.get("/secure", dependencies=[Depends(auth)])
