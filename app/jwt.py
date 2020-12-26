@@ -26,11 +26,19 @@ __public_key_b64 = None
 
 
 class BearerToken(pydantic.BaseModel):
+    """
+    Data for a token type
+    """
     access_token: str
     token_type: str
 
 
 def get_private_key() -> rsa.RSAPrivateKey:
+    """
+    This will decode a base64 encoded private key in the JWT_PRIVATE_KEY environment variable, or create a new private
+    key and cache it in the global __private_key variable as an RSAPrivateKey type
+    :return: RSAPrivateKey instance
+    """
     # I had billions of problems with multiline entries in my .env file, so I base64 encode the RSA keys for environment
     # variables
     global __private_key
@@ -45,6 +53,10 @@ def get_private_key() -> rsa.RSAPrivateKey:
 
 
 def get_private_key_str() -> str:
+    """
+    Converts the private key to RSA PEM encoded utf-8 string
+    :return: RSA PEM encoded private key string
+    """
     privkey = get_private_key()
     privstr = privkey.private_bytes(
         encoding=serialization.Encoding.PEM,
@@ -55,6 +67,10 @@ def get_private_key_str() -> str:
 
 
 def get_public_key() -> rsa.RSAPublicKey:
+    """
+    Returns an RSAPublicKey for the private key, caches the key if it's not already cached
+    :return: RSAPublicKey instance
+    """
 
     global __public_key
 
@@ -66,15 +82,25 @@ def get_public_key() -> rsa.RSAPublicKey:
 
 
 def get_public_key_bytes() -> bytes:
+    """
+    Gets the public key bytes
+    :return: bytes of the RSA public key
+    """
+
     pubkey = get_public_key()
     pubbytes = pubkey.public_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
+
     return pubbytes
 
 
 def get_public_key_b64() -> bytes:
+    """
+    Gets a base64-encoded version of the public key, and caches it if it isn't already cacched
+    :return: bytes - base64 encoded RSA public key
+    """
     global __public_key_b64
     if not __public_key_b64:
         __public_key_b64 = standard_b64encode(get_public_key_bytes())
@@ -82,7 +108,9 @@ def get_public_key_b64() -> bytes:
 
 
 class JWTBearerRSA(HTTPBearer):
-
+    """
+    Support for creating and validating RSA tokens.
+    """
     ALGORITHMS = {'RS256', 'RS384', 'RS512'}
 
     def __init__(self, auto_error: bool = True, algorithm='RS256'):
