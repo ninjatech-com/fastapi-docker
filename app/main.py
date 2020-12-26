@@ -3,8 +3,8 @@ import datetime
 from fastapi import Depends, FastAPI, HTTPException, status
 import pydantic
 
-from app.cors import setup_cors
-from app.jwt import BearerToken, JWTBearerRS256, TOKEN_LIFETIME_SECONDS
+from cors import setup_cors
+from jwt import BearerToken, JWTBearerRS256, TOKEN_LIFETIME_SECONDS
 
 
 class LoginCredentials(pydantic.BaseModel):
