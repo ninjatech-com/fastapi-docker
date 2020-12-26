@@ -1,6 +1,7 @@
 from base64 import standard_b64decode
 import datetime
 import os
+import time
 from typing import Dict, Optional
 
 from fastapi import HTTPException
@@ -93,18 +94,19 @@ class JWTBearerRS256(HTTPBearer):
         :param expires_delta: how long the token is good for
         :return: a JWT string
         """
-        claims_to_encode = claims.copy()
-        if expires_delta:
-            expire = datetime.datetime.utcnow() + expires_delta
-        else:
-            expire = datetime.datetime.utcnow() + datetime.timedelta(seconds=TOKEN_LIFETIME_SECONDS)
-
         if not set(claims).isdisjoint({'iat', 'exp'}):
             # I don't want the caller to deliver the issued at time nor the expiration for security
             raise ValueError('Invalid claims')
 
-        claims_to_encode['iat'] = datetime.datetime.utcnow().isoformat()
-        claims_to_encode['exp'] = expire.isoformat()
+        issued = time.time()
+        claims_to_encode = claims.copy()
+        if expires_delta:
+            expire = issued + expires_delta.total_seconds()
+        else:
+            expire = issued + TOKEN_LIFETIME_SECONDS
+
+        claims_to_encode['iat'] = issued
+        claims_to_encode['exp'] = expire
         encoded = jws.sign(claims_to_encode, get_private_key(), algorithm=cls.ALGORITHM)
 
         return encoded
