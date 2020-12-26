@@ -15,7 +15,7 @@ from starlette.requests import Request
 from starlette.status import HTTP_403_FORBIDDEN
 
 TOKEN_LIFETIME_SECONDS = os.environ.get('TOKEN_LIFETIME_SECONDS') or 60 * 60
-TOKEN_LIFETIME_SECONDS = int(TOKEN_LIFETIME_SECONDS)  # convert if it came in from the environment
+TOKEN_LIFETIME_SECONDS = int(TOKEN_LIFETIME_SECONDS)  # convert if it came in from an environment variable
 
 
 class BearerToken(pydantic.BaseModel):
