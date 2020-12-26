@@ -14,6 +14,7 @@ python-jose = {extras = ["cryptography"], version = "*"}
 starlette = "*"
 cryptography = "*"
 passlib = {extras = ["bcrypt"], version = "*"}
+psycopg2-binary = "*"
 
 [requires]
 python_version = "3.8"
