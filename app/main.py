@@ -4,17 +4,20 @@ from fastapi import Depends, FastAPI, HTTPException, status
 import pydantic
 
 from cors import setup_cors
-from jwt import BearerToken, get_public_key_b64, JWTBearerRS256, TOKEN_LIFETIME_SECONDS
+from jwt import BearerToken, get_public_key_b64, JWTBearerRSA, TOKEN_LIFETIME_SECONDS
 
 
 class LoginCredentials(pydantic.BaseModel):
+    """
+    The username and password used to authenticate
+    """
     username: str
     password: str
 
 
 application = FastAPI()
 setup_cors(application)
-auth = JWTBearerRS256()
+auth = JWTBearerRSA()
 
 
 @application.get("/")
@@ -57,8 +60,11 @@ async def login(credentials: LoginCredentials):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = JWTBearerRS256.create_access_token(claims={"sub": user},
-                                                      expires_delta=datetime.timedelta(seconds=TOKEN_LIFETIME_SECONDS))
+    access_token = JWTBearerRSA.create_access_token(
+        algorithm='RS256',
+        claims={"sub": user},
+        expires_delta=datetime.timedelta(seconds=TOKEN_LIFETIME_SECONDS)
+    )
     return {"access_token": access_token, "token_type": "bearer"}
 
 

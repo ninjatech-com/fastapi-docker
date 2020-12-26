@@ -81,11 +81,15 @@ def get_public_key_b64() -> bytes:
     return __public_key_b64
 
 
-class JWTBearerRS256(HTTPBearer):
-    ALGORITHM = 'RS256'
+class JWTBearerRSA(HTTPBearer):
 
-    def __init__(self, auto_error: bool = True):
+    ALGORITHMS = {'RS256', 'RS384', 'RS512'}
+
+    def __init__(self, auto_error: bool = True, algorithm='RS256'):
         super().__init__(auto_error=auto_error)
+        if algorithm not in self.ALGORITHMS:
+            raise ValueError(f"Unsupported algorithm {algorithm}")
+        self.algo = algorithm
 
     def verify_jwt(self, jwt_token: str) -> dict:
         """
@@ -95,20 +99,18 @@ class JWTBearerRS256(HTTPBearer):
         :raises HTTPException if there are issues with the tokens or claims
         """
 
-        # TODO: beef up claims validation
-
         try:
             header = jwt.get_unverified_header(jwt_token)
         except JWTError:
-            raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='JWK invalid')
+            raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='Invalid Header')
 
-        if header['alg'] != self.ALGORITHM:
-            raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='JWK invalid')
+        if header['alg'] != self.algo:
+            raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='Unsupported Algorithm')
 
         try:
-            claims = jwt.decode(jwt_token, get_public_key_bytes().decode('utf-8'), self.ALGORITHM)
+            claims = jwt.decode(jwt_token, get_public_key_bytes().decode('utf-8'), self.algo)
         except JWTError:
-            raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='JWK invalid')
+            raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='Invalid Claims')
 
         return claims
 
@@ -130,14 +132,26 @@ class JWTBearerRS256(HTTPBearer):
 
         return data
 
-    @classmethod
-    def create_access_token(cls, claims: Dict, expires_delta: Optional[datetime.timedelta]) -> str:
+    @staticmethod
+    def create_access_token(
+            algorithm: str = 'RS256',
+            claims: Optional[Dict] = None,
+            expires_delta: Optional[datetime.timedelta] = None
+    ) -> str:
         """
         Create a signed access token with claims
+        :param algorithm: the RSA algorithm to use - can be RS256, RS384, RS512
         :param claims: the claims to put in the key
         :param expires_delta: how long the token is good for
         :return: a JWT string
         """
+
+        if algorithm not in JWTBearerRSA.ALGORITHMS:
+            raise ValueError(f'Unsupported Algorithm {algorithm}')
+
+        if claims is None:
+            claims = dict()
+
         if not set(claims).isdisjoint({'iat', 'exp'}):
             # I don't want the caller to deliver the issued at time nor the expiration for security
             raise ValueError('Invalid claims')
@@ -151,6 +165,6 @@ class JWTBearerRS256(HTTPBearer):
 
         claims_to_encode['iat'] = issued
         claims_to_encode['exp'] = expire
-        encoded = jws.sign(claims_to_encode, get_private_key_str(), algorithm=cls.ALGORITHM)
+        encoded = jws.sign(claims_to_encode, get_private_key_str(), algorithm=algorithm)
 
         return encoded
