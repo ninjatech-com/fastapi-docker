@@ -4,7 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException, status
 import pydantic
 
 from cors import setup_cors
-from jwt import BearerToken, JWTBearerRS256, TOKEN_LIFETIME_SECONDS
+from jwt import BearerToken, get_public_key_b64, JWTBearerRS256, TOKEN_LIFETIME_SECONDS
 
 
 class LoginCredentials(pydantic.BaseModel):
@@ -24,6 +24,11 @@ async def root() -> dict:
     :return: dict
     """
     return {"message": "Hello World"}
+
+
+@application.get('/pubkey')
+async def get_pubkey_b64():
+    return get_public_key_b64()
 
 
 async def authenticate_user(creds: LoginCredentials) -> str:
