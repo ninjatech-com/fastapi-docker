@@ -4,7 +4,8 @@ from fastapi import Depends, FastAPI, HTTPException, status
 import pydantic
 
 from cors import setup_cors
-from jwt import BearerToken, get_public_key_b64, JWTBearerRSA, TOKEN_LIFETIME_SECONDS
+from jwt import BearerToken, JWTBearerRSA, TOKEN_LIFETIME_SECONDS
+from rsa import get_public_key_b64
 
 
 class LoginCredentials(pydantic.BaseModel):
