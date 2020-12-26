@@ -13,6 +13,7 @@ uvicorn = "*"
 python-jose = {extras = ["cryptography"], version = "*"}
 starlette = "*"
 cryptography = "*"
+passlib = {extras = ["bcrypt"], version = "*"}
 
 [requires]
 python_version = "3.8"
