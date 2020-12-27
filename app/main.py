@@ -1,19 +1,11 @@
 import datetime
 
 from fastapi import Depends, FastAPI, HTTPException, status
-import pydantic
 
+import django_authenticate
 from cors import setup_cors
-from jwt import BearerToken, JWTBearerRSA, TOKEN_LIFETIME_SECONDS
+from jwt import AUDIENCE, BearerToken, JWTBearerRSA, TOKEN_LIFETIME_SECONDS
 from rsa import get_public_key_b64
-
-
-class LoginCredentials(pydantic.BaseModel):
-    """
-    The username and password used to authenticate
-    """
-    username: str
-    password: str
 
 
 application = FastAPI()
@@ -39,17 +31,8 @@ async def get_pubkey_b64():
     return get_public_key_b64()
 
 
-async def authenticate_user(creds: LoginCredentials) -> str:
-    """
-    Placeholder for user/pass validation
-    :param creds: the login credentials
-    :return: the user name
-    """
-    return "username"
-
-
 @application.post("/auth/token", response_model=BearerToken)
-async def login(credentials: LoginCredentials):
+async def login(credentials: django_authenticate.LoginCredentials):
     """
     Validates credentials, returns authorization token
     :param credentials: the login credentials
@@ -57,8 +40,9 @@ async def login(credentials: LoginCredentials):
     :raises HTTPException 401 if the credentials are not valid
     """
 
-    user = await authenticate_user(credentials)
-    if not user:
+    is_authenticated = await django_authenticate.authenticate_user(credentials)
+
+    if not is_authenticated:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -67,7 +51,7 @@ async def login(credentials: LoginCredentials):
 
     access_token = JWTBearerRSA.create_access_token(
         algorithm='RS256',
-        claims={"sub": user},
+        claims={'sub': credentials.user_email, 'aud': AUDIENCE},
         expires_delta=datetime.timedelta(seconds=TOKEN_LIFETIME_SECONDS)
     )
     rv = BearerToken(access_token=access_token, token_type='bearer')

@@ -3,7 +3,6 @@ import os
 import time
 from typing import Dict, Optional
 
-
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -16,6 +15,7 @@ from starlette.status import HTTP_403_FORBIDDEN
 
 import rsa
 
+AUDIENCE = 'Django Admin'
 TOKEN_LIFETIME_SECONDS = os.environ.get('TOKEN_LIFETIME_SECONDS') or 60 * 60
 TOKEN_LIFETIME_SECONDS = int(TOKEN_LIFETIME_SECONDS)  # convert if it came in from an environment variable
 
@@ -57,7 +57,7 @@ class JWTBearerRSA(HTTPBearer):
             raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='Unsupported Algorithm')
 
         try:
-            claims = jwt.decode(jwt_token, rsa.get_public_key_bytes().decode('utf-8'), self.algo)
+            claims = jwt.decode(jwt_token, rsa.get_public_key_bytes().decode('utf-8'), self.algo, audience=AUDIENCE)
         except JWTError:
             raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='Invalid Claims')
 
