@@ -10,7 +10,7 @@ origins = [
 
 def setup_cors(app: FastAPI) -> None:
     """
-    Configures a very liberal CORS policy
+    Configures a local CORS policy
     :param app: the FastAPI app instance
     :return: None
     """
