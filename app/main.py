@@ -2,8 +2,8 @@ import datetime
 
 from fastapi import Depends, FastAPI, HTTPException, status
 
-import django_authenticate
 from cors import setup_cors
+import django_authenticate
 from jwt import AUDIENCE, BearerToken, JWTBearerRSA, TOKEN_LIFETIME_SECONDS
 from rsa import get_public_key_b64
 
