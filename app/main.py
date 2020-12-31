@@ -1,14 +1,10 @@
 import datetime
 
 from fastapi import Depends, FastAPI, HTTPException, status
-from jose import jwk
 import pydantic
 
 from cors import setup_cors
-from rsa import get_public_key_bytes
-from jwt import AUDIENCE, BearerToken, JWKData, JWTBearerRSA, TOKEN_LIFETIME_SECONDS
-
-from typing import List
+from jwt import AUDIENCE, BearerToken, get_jwks, JWKKeySet, JWTBearerRSA, TOKEN_LIFETIME_SECONDS
 
 
 class LoginCredentials(pydantic.BaseModel):
@@ -33,17 +29,14 @@ async def root() -> dict:
     return {"message": "Hello World"}
 
 
-@application.get('/pubkey', response_model=List[JWKData])
+@application.get('/pubkey', response_model=JWKKeySet)
 async def get_pubkey_b64():
     """
-    Return the JWK
+    Return the JWK(s)
     :return: JWKData
     """
-    x = get_public_key_bytes()
-    y = jwk.construct(x, 'RS256')
-    z = y.to_dict()
-    z['use'] = 'sig'
-    return [z]
+
+    return get_jwks()
 
 
 async def authenticate_user(creds: LoginCredentials) -> str:

@@ -1,12 +1,12 @@
 import datetime
 import os
 import time
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from jose import JWTError, jws, jwt
+from jose import JWTError, jws, jwt, jwk
 
 import pydantic
 
@@ -38,7 +38,23 @@ class JWKData(pydantic.BaseModel):
     kty: str
     n: str
     use: str
-    fake: Optional[str]
+
+
+JWKKeySet = Dict[str, List[JWKData]]
+
+
+def get_jwks() -> Dict[str, List[Dict]]:
+    """
+    gets the jwk from the keypair
+    :return: JWK
+    """
+    x = rsa.get_public_key_bytes()
+    y = jwk.construct(x, 'RS256')
+    z = y.to_dict()
+    z['use'] = 'sig'
+    jd = JWKData(**z)
+
+    return {'keys': [dict(jd)]}
 
 
 class JWTBearerRSA(HTTPBearer):
@@ -70,7 +86,7 @@ class JWTBearerRSA(HTTPBearer):
             raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='Unsupported Algorithm')
 
         try:
-            claims = jwt.decode(jwt_token, rsa.get_public_key_bytes().decode('utf-8'), self.algo, audience=AUDIENCE)
+            claims = jwt.decode(jwt_token, get_jwks(), self.algo, audience=AUDIENCE)
         except JWTError:
             raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='Invalid Claims')
 
