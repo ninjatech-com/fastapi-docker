@@ -45,10 +45,10 @@ JWKKeySet = Dict[str, List[JWKData]]
 
 def get_jwks() -> Dict[str, List[Dict]]:
     """
-    gets the jwk from the keypair
-    :return: JWK
+    gets the jwks from the keypair
+    :return: JWK keyset
     """
-
+    x = rsa.get_public_key_bytes()
     keys = {'keys': []}
 
     for alg in JWTBearerRSA.ALGORITHMS:
