@@ -29,11 +29,11 @@ async def root() -> dict:
     return {"message": "Hello World"}
 
 
-@application.get('/pubkey', response_model=JWKKeySet)
-async def get_pubkey_b64():
+@application.get('/jwks', response_model=JWKKeySet)
+async def get_jwk_set():
     """
     Return the JWK(s)
-    :return: JWKData
+    :return: JWKKeySet
     """
 
     return get_jwks()
