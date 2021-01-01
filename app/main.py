@@ -4,15 +4,14 @@ from fastapi import Depends, FastAPI, HTTPException, status
 import pydantic
 
 from cors import setup_cors
-from jwt import BearerToken, JWTBearerRSA, TOKEN_LIFETIME_SECONDS
-from rsa import get_public_key_b64
+from jwt import AUDIENCE, BearerToken, get_jwks, JWKKeySet, JWTBearerRSA, TOKEN_LIFETIME_SECONDS
 
 
 class LoginCredentials(pydantic.BaseModel):
     """
     The username and password used to authenticate
     """
-    username: str
+    user_email: str
     password: str
 
 
@@ -30,13 +29,14 @@ async def root() -> dict:
     return {"message": "Hello World"}
 
 
-@application.get('/pubkey')
+@application.get('/pubkey', response_model=JWKKeySet)
 async def get_pubkey_b64():
     """
-    Get the RSA PEM encoded public key in base64 encoding
-    :return: str
+    Return the JWK(s)
+    :return: JWKData
     """
-    return get_public_key_b64()
+
+    return get_jwks()
 
 
 async def authenticate_user(creds: LoginCredentials) -> str:
@@ -67,7 +67,7 @@ async def login(credentials: LoginCredentials):
 
     access_token = JWTBearerRSA.create_access_token(
         algorithm='RS256',
-        claims={"sub": user},
+        claims={'sub': credentials.user_email, 'aud': AUDIENCE},
         expires_delta=datetime.timedelta(seconds=TOKEN_LIFETIME_SECONDS)
     )
     rv = BearerToken(access_token=access_token, token_type='bearer')
