@@ -48,13 +48,15 @@ def get_jwks() -> Dict[str, List[Dict]]:
     gets the jwk from the keypair
     :return: JWK
     """
-    x = rsa.get_public_key_bytes()
-    y = jwk.construct(x, 'RS256')
-    z = y.to_dict()
-    z['use'] = 'sig'
-    jd = JWKData(**z)
 
-    return {'keys': [dict(jd)]}
+    keys = {'keys': []}
+
+    for alg in JWTBearerRSA.ALGORITHMS:
+        jwkey = jwk.construct(x, alg).to_dict()
+        jwkey['use'] = 'sig'
+        keys['keys'].append(jwkey)
+
+    return keys
 
 
 class JWTBearerRSA(HTTPBearer):
@@ -67,7 +69,6 @@ class JWTBearerRSA(HTTPBearer):
         super().__init__(auto_error=auto_error)
         if algorithm not in self.ALGORITHMS:
             raise ValueError(f"Unsupported algorithm {algorithm}")
-        self.algo = algorithm
 
     def verify_jwt(self, jwt_token: str) -> dict:
         """
@@ -82,11 +83,11 @@ class JWTBearerRSA(HTTPBearer):
         except JWTError:
             raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='Invalid Header')
 
-        if header['alg'] != self.algo:
+        if header['alg'] not in self.ALGORITHMS:
             raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='Unsupported Algorithm')
 
         try:
-            claims = jwt.decode(jwt_token, get_jwks(), self.algo, audience=AUDIENCE)
+            claims = jwt.decode(jwt_token, get_jwks(), header['alg'], audience=AUDIENCE)
         except JWTError:
             raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='Invalid Claims')
 
