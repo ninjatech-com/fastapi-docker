@@ -4,8 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException, status
 
 from cors import setup_cors
 import django_authenticate
-from jwt import AUDIENCE, BearerToken, JWTBearerRSA, TOKEN_LIFETIME_SECONDS
-from rsa import get_public_key_b64
+from jwt import AUDIENCE, BearerToken, get_jwks, JWKKeySet, JWTBearerRSA, TOKEN_LIFETIME_SECONDS
 
 
 application = FastAPI()
@@ -22,13 +21,14 @@ async def root() -> dict:
     return {"message": "Hello World"}
 
 
-@application.get('/pubkey')
+@application.get('/pubkey', response_model=JWKKeySet)
 async def get_pubkey_b64():
     """
-    Get the RSA PEM encoded public key in base64 encoding
-    :return: str
+    Return the JWK(s)
+    :return: JWKData
     """
-    return get_public_key_b64()
+
+    return get_jwks()
 
 
 @application.post("/auth/token", response_model=BearerToken)

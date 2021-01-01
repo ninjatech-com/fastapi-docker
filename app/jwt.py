@@ -1,12 +1,12 @@
 import datetime
 import os
 import time
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from jose import JWTError, jws, jwt
+from jose import JWTError, jws, jwt, jwk
 
 import pydantic
 
@@ -15,7 +15,7 @@ from starlette.status import HTTP_403_FORBIDDEN
 
 import rsa
 
-AUDIENCE = 'Django Admin'
+AUDIENCE = 'Admin'
 TOKEN_LIFETIME_SECONDS = os.environ.get('TOKEN_LIFETIME_SECONDS') or 60 * 60
 TOKEN_LIFETIME_SECONDS = int(TOKEN_LIFETIME_SECONDS)  # convert if it came in from an environment variable
 
@@ -28,6 +28,37 @@ class BearerToken(pydantic.BaseModel):
     token_type: str
 
 
+class JWKData(pydantic.BaseModel):
+    """
+    Used to dump JWK data
+    """
+    alg: str
+    e: str
+    kid: Optional[str]
+    kty: str
+    n: str
+    use: str
+
+
+JWKKeySet = Dict[str, List[JWKData]]
+
+
+def get_jwks() -> Dict[str, List[Dict]]:
+    """
+    gets the jwk from the keypair
+    :return: JWK
+    """
+
+    keys = {'keys': []}
+
+    for alg in JWTBearerRSA.ALGORITHMS:
+        jwkey = jwk.construct(x, alg).to_dict()
+        jwkey['use'] = 'sig'
+        keys['keys'].append(jwkey)
+
+    return keys
+
+
 class JWTBearerRSA(HTTPBearer):
     """
     Support for creating and validating RSA tokens.
@@ -38,7 +69,6 @@ class JWTBearerRSA(HTTPBearer):
         super().__init__(auto_error=auto_error)
         if algorithm not in self.ALGORITHMS:
             raise ValueError(f"Unsupported algorithm {algorithm}")
-        self.algo = algorithm
 
     def verify_jwt(self, jwt_token: str) -> dict:
         """
@@ -53,11 +83,11 @@ class JWTBearerRSA(HTTPBearer):
         except JWTError:
             raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='Invalid Header')
 
-        if header['alg'] != self.algo:
+        if header['alg'] not in self.ALGORITHMS:
             raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='Unsupported Algorithm')
 
         try:
-            claims = jwt.decode(jwt_token, rsa.get_public_key_bytes().decode('utf-8'), self.algo, audience=AUDIENCE)
+            claims = jwt.decode(jwt_token, get_jwks(), header['alg'], audience=AUDIENCE)
         except JWTError:
             raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='Invalid Claims')
 
