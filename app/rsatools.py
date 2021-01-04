@@ -1,8 +1,13 @@
-from base64 import standard_b64encode, standard_b64decode
+from base64 import urlsafe_b64encode, urlsafe_b64decode
+import logging
 import os
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 __private_key = None
 __public_key = None
@@ -15,14 +20,17 @@ def get_private_key() -> rsa.RSAPrivateKey:
     key and cache it in the global __private_key variable as an RSAPrivateKey type
     :return: RSAPrivateKey instance
     """
-    # I had billions of problems with multiline entries in my .env file, so I base64 encode the RSA keys for environment
-    # variables
+    # I had billions of problems with multiline entries in my .env file, so I base64url encode
+    # the RSA keys for environment variables
     global __private_key
     if not __private_key:
         if k := os.environ.get('JWT_PRIVATE_KEY'):
-            __private_key = serialization.load_pem_private_key(standard_b64decode(k), password=None)
+            __private_key = serialization.load_pem_private_key(urlsafe_b64decode(k), password=None)
         else:
             # generate a private key
+            # note that running a multi-process version of this via something like gunicorn
+            # means that each process will get a different private key, so this is really just
+            # to make debugging easier.
             __private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
 
     return __private_key
@@ -79,5 +87,5 @@ def get_public_key_b64() -> bytes:
     """
     global __public_key_b64
     if not __public_key_b64:
-        __public_key_b64 = standard_b64encode(get_public_key_bytes())
+        __public_key_b64 = urlsafe_b64encode(get_public_key_bytes())
     return __public_key_b64

@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# better if these parameters are not hardcoded 
+# TODO: better if these parameters are not hardcoded
+
 origins = [
     "http://localhost",
     "http://localhost:8080",
@@ -10,7 +11,7 @@ origins = [
 
 def setup_cors(app: FastAPI) -> None:
     """
-    Configures a very liberal CORS policy
+    Configures CORS
     :param app: the FastAPI app instance
     :return: None
     """
