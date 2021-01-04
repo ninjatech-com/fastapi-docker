@@ -1,7 +1,10 @@
 import datetime
+import json
+import logging
 import os
 import time
 from typing import Dict, List, Optional
+import uuid
 
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -13,11 +16,17 @@ import pydantic
 from starlette.requests import Request
 from starlette.status import HTTP_403_FORBIDDEN
 
-import rsa
+from app.rsatools import get_public_key_bytes, get_private_key_str, get_private_key
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 AUDIENCE = 'Admin'
 TOKEN_LIFETIME_SECONDS = os.environ.get('TOKEN_LIFETIME_SECONDS') or 60 * 60
 TOKEN_LIFETIME_SECONDS = int(TOKEN_LIFETIME_SECONDS)  # convert if it came in from an environment variable
+
+_keyset = None
 
 
 class BearerToken(pydantic.BaseModel):
@@ -48,15 +57,23 @@ def get_jwks() -> Dict[str, List[Dict]]:
     gets the jwks from the keypair
     :return: JWK keyset
     """
-    x = rsa.get_public_key_bytes()
-    keys = {'keys': []}
 
-    for alg in JWTBearerRSA.ALGORITHMS:
-        jwkey = jwk.construct(x, alg).to_dict()
-        jwkey['use'] = 'sig'
-        keys['keys'].append(jwkey)
+    global _keyset
+    if ks := os.environ.get("JWT_JWKS", None):
+        # this environment variable can be seeded by gunicorn startup to avoid clashing across
+        # multiple processes
+        _keyset = json.loads(ks)
 
-    return keys
+    else:
+        x = get_public_key_bytes()
+        keys = {'keys': []}
+        for alg in JWTBearerRSA.ALGORITHMS:
+            jwkey = jwk.construct(x, alg).to_dict()
+            jwkey['use'] = 'sig'
+            jwkey['kid'] = str(uuid.uuid4())
+            keys['keys'].append(jwkey)
+        _keyset = keys
+    return _keyset
 
 
 class JWTBearerRSA(HTTPBearer):
@@ -88,7 +105,8 @@ class JWTBearerRSA(HTTPBearer):
 
         try:
             claims = jwt.decode(jwt_token, get_jwks(), header['alg'], audience=AUDIENCE)
-        except JWTError:
+        except JWTError as e:
+            logger.error("JWT decode error", exc_info=e)
             raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail='Invalid Claims')
 
         return claims
@@ -144,6 +162,7 @@ class JWTBearerRSA(HTTPBearer):
 
         claims_to_encode['iat'] = issued
         claims_to_encode['exp'] = expire
-        encoded = jws.sign(claims_to_encode, rsa.get_private_key_str(), algorithm=algorithm)
 
+        # TODO: see if it makes more sense to use the same types that python-jose uses instead of a string here.
+        encoded = jws.sign(claims_to_encode, get_private_key_str(), algorithm=algorithm)
         return encoded

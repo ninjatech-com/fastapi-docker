@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
-openssl genrsa -out jwtRS256.pem 2048
-base64 < jwtRS256.pem -w 0 > jwtRS256.base64
+# base64url encoded private key
+KEY=${JWT_PRIVATE_KEY:-$(openssl genrsa 2048 | base64 -w 0 | tr '/+' '_-')}
 
-openssl rsa -in jwtRS256.pem -pubout > jwtRS256.pem.pub
-base64 < jwtRS256.pem.pub -w 0 > jwtRS256.base64.pub
+echo "$KEY"
+
