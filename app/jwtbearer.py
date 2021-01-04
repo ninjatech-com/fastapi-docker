@@ -26,7 +26,7 @@ AUDIENCE = 'Admin'
 TOKEN_LIFETIME_SECONDS = os.environ.get('TOKEN_LIFETIME_SECONDS') or 60 * 60
 TOKEN_LIFETIME_SECONDS = int(TOKEN_LIFETIME_SECONDS)  # convert if it came in from an environment variable
 
-__keyset = None
+_keyset = None
 
 
 class BearerToken(pydantic.BaseModel):
@@ -58,11 +58,11 @@ def get_jwks() -> Dict[str, List[Dict]]:
     :return: JWK keyset
     """
 
-    global __keyset
+    global _keyset
     if ks := os.environ.get("JWT_JWKS", None):
         # this environment variable can be seeded by gunicorn startup to avoid clashing across
         # multiple processes
-        __keyset = json.loads(ks)
+        _keyset = json.loads(ks)
 
     else:
         x = get_public_key_bytes()
@@ -72,8 +72,8 @@ def get_jwks() -> Dict[str, List[Dict]]:
             jwkey['use'] = 'sig'
             jwkey['kid'] = str(uuid.uuid4())
             keys['keys'].append(jwkey)
-        __keyset = keys
-    return __keyset
+        _keyset = keys
+    return _keyset
 
 
 class JWTBearerRSA(HTTPBearer):
