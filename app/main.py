@@ -2,9 +2,9 @@ import datetime
 
 from fastapi import Depends, FastAPI, HTTPException, status
 
-from cors import setup_cors
-import django_authenticate
-from jwt import AUDIENCE, BearerToken, get_jwks, JWKKeySet, JWTBearerRSA, TOKEN_LIFETIME_SECONDS
+from app.cors import setup_cors
+from app.jwtbearer import AUDIENCE, BearerToken, get_jwks, JWKKeySet, JWTBearerRSA, TOKEN_LIFETIME_SECONDS
+import app.django_authenticate
 
 
 application = FastAPI()
