@@ -8,7 +8,7 @@ pytest = "*"
 pytest-mock = "*"
 
 [packages]
-fastapi = {extras = ["all"], version = "*"}
+fastapi = "*"
 gunicorn = "*"
 pydantic = "*"
 uvicorn = "*"
@@ -17,4 +17,4 @@ starlette = "*"
 cryptography = "*"
 
 [requires]
-python_version = "3.8"
+python_version = "3"
